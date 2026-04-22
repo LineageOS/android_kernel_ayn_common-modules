@@ -44,6 +44,10 @@ ifeq ($(CONFIG_JOYSTICK_MOORECHIP_JOYSTICK), y)
 	obj-$(CONFIG_MSM_MOORECHIP) += moorechip-joystick.o
 endif
 
+ifeq ($(CONFIG_BACKLIGHT_AYN_MINILED), y)
+	obj-$(CONFIG_MSM_MOORECHIP) += ayn-miniled.o
+endif
+
 ifeq ($(CONFIG_FINGERPRINT_FOCALTECH), y)
 	LINUX_INC += -include $(MOORECHIP_ROOT)/focaltech_fp/ff_core.h
 	LINUX_INC += -include $(MOORECHIP_ROOT)/focaltech_fp/ff_log.h
