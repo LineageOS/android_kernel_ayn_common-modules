@@ -259,12 +259,10 @@ static int htr3212_register_panel_notifier(struct htr3212_status *htr3212)
 	of_node_put(pnode);
 	if (IS_ERR(panel)) {
 		rc = PTR_ERR(panel);
-		if (rc != -EPROBE_DEFER) {
-			dev_err(&htr3212->client->dev,
-				"failed to find secondary panel, rc=%d\n", rc);
-			return 0;
-		}
-		goto err_unregister;
+		dev_warn(&htr3212->client->dev,
+			 "Secondary panel notifier unavailable, continuing primary-only: %d\n",
+			 rc);
+		return 0;
 	}
 
 	secondary_client = htr3212_secondary_client(primary_client);
@@ -280,19 +278,14 @@ static int htr3212_register_panel_notifier(struct htr3212_status *htr3212)
 		htr3212_panel_event_notifier_callback, (void *)htr3212);
 	if (IS_ERR(cookie)) {
 		rc = PTR_ERR(cookie);
-		dev_err(&htr3212->client->dev,
-			"failed to register secondary panel notifier, rc=%d\n", rc);
-		if (rc != -EPROBE_DEFER)
-			return 0;
-		goto err_unregister;
+		dev_warn(&htr3212->client->dev,
+			 "Secondary panel notifier unavailable, continuing primary-only: %d\n",
+			 rc);
+		return 0;
 	}
 
 	htr3212->notifier_cookie_sec = cookie;
 	return 0;
-
-err_unregister:
-	htr3212_unregister_panel_notifiers(htr3212);
-	return rc;
 }
 
 #if (KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE)

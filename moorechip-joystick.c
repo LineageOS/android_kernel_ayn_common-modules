@@ -1014,9 +1014,11 @@ static int moorechip_register_panel_notifier(struct moorechip_driver *moorechip)
 		PANEL_EVENT_NOTIFIER_CLIENT_JOYSTICK_SEC,
 		&moorechip->notifier_cookie_sec, false);
 	if (ret)
-		moorechip_unregister_panel_notifiers(moorechip);
+		dev_warn(&moorechip->serdev->dev,
+			 "Secondary panel notifier unavailable, continuing primary-only: %d\n",
+			 ret);
 
-	return ret;
+	return 0;
 }
 
 #define MOORECHIP_CALIB_NUM_FIELDS 20
