@@ -1166,9 +1166,6 @@ static ssize_t set_layout(struct device *dev, struct device_attribute *attr,
 	else
 		return -EINVAL;
 
-	input_unregister_device(moorechip->input);
-	moorechip_joystick_register_input(moorechip);
-
 	return count;
 }
 
@@ -1196,9 +1193,6 @@ static ssize_t set_triggers(struct device *dev, struct device_attribute *attr,
 		moorechip->trigger_mode = MOORECHIP_TRIGGER_MODE_BOTH;
 	else
 		return -EINVAL;
-
-	input_unregister_device(moorechip->input);
-	moorechip_joystick_register_input(moorechip);
 
 	return count;
 }
