@@ -176,6 +176,7 @@ struct moorechip_driver {
 	bool panel_on[2];
 	bool system_suspended;
 	bool fw_recheck;
+	bool left_stick_axis_swap;
 };
 
 static int moorechip_send_cmd(struct moorechip_driver *moorechip, u8 type, const void *data, u16 datalen)
@@ -274,6 +275,8 @@ static int moorechip_set_left_stick_axis_swap(struct moorechip_driver *moorechip
 		.cmd = MOORECHIP_CMD_SET_LEFT_STICK_AXIS_SWAP,
 		.enable = enable ? 3 : 0
 	};
+
+	moorechip->left_stick_axis_swap = enable;
 
 	return moorechip_send_cmd(moorechip, MOORECHIP_TYPE_CMD, &en, sizeof(en));
 }
@@ -884,6 +887,10 @@ static int moorechip_joystick_power_on_locked(
 	}
 	if (ret)
 		goto err_close;
+
+	if (moorechip->left_stick_axis_swap) {
+		moorechip_set_left_stick_axis_swap(moorechip, true);
+	}
 
 	return 0;
 
