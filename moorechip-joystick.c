@@ -620,7 +620,7 @@ static int moorechip_joystick_receive_buf(struct serdev_device *serdev,
 			if (changed_keys & MOORECHIP_BTN_THUMBR)
 				input_report_key(moorechip->input, BTN_THUMBR, !!(keys & MOORECHIP_BTN_THUMBR));
 			if (changed_keys & MOORECHIP_BTN_HOME)
-				input_report_key(moorechip->input, BTN_MODE, !!(keys & MOORECHIP_BTN_HOME));
+				input_report_key(moorechip->input, KEY_HOME, !!(keys & MOORECHIP_BTN_HOME));
 			if (changed_keys & MOORECHIP_BTN_BACK)
 				input_report_key(moorechip->input, KEY_BACK, !!(keys & MOORECHIP_BTN_BACK));
 
@@ -762,7 +762,7 @@ static int moorechip_joystick_register_input(struct moorechip_driver *moorechip)
 	input_set_capability(moorechip->input, EV_KEY, BTN_START);
 	input_set_capability(moorechip->input, EV_KEY, BTN_THUMBL);
 	input_set_capability(moorechip->input, EV_KEY, BTN_THUMBR);
-	input_set_capability(moorechip->input, EV_KEY, BTN_MODE);
+	input_set_capability(moorechip->input, EV_KEY, KEY_HOME);
 	input_set_capability(moorechip->input, EV_KEY, KEY_BACK);
 	input_set_capability(moorechip->input, EV_KEY, BTN_TL2);
 	input_set_capability(moorechip->input, EV_KEY, BTN_TR2);
@@ -1253,7 +1253,7 @@ static const struct {
 	u32 code;
 } moorechip_function_map[] = {
 	{ "none",   KEY_RESERVED },
-	{ "home",   BTN_MODE },
+	{ "home",   BTN_HOME },
 	{ "select", BTN_SELECT },
 	{ "start",  BTN_START },
 	{ "back",   KEY_BACK },
