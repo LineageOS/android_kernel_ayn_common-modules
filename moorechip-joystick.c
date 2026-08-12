@@ -767,6 +767,20 @@ static int moorechip_joystick_register_input(struct moorechip_driver *moorechip)
 	input_set_capability(moorechip->input, EV_KEY, BTN_TL2);
 	input_set_capability(moorechip->input, EV_KEY, BTN_TR2);
 
+	// Additional mappable option
+	input_set_capability(moorechip->input, EV_KEY, BTN_C);
+	input_set_capability(moorechip->input, EV_KEY, BTN_Z);
+	input_set_capability(moorechip->input, EV_KEY, KEY_ASSISTANT);
+	input_set_capability(moorechip->input, EV_KEY, KEY_APPSELECT);
+	input_set_capability(moorechip->input, EV_KEY, BTN_DND);
+	input_set_capability(moorechip->input, EV_KEY, BTN_MODE);
+	input_set_capability(moorechip->input, EV_KEY, KEY_BRIGHTNESSDOWN);
+	input_set_capability(moorechip->input, EV_KEY, KEY_BRIGHTNESSUP);
+	input_set_capability(moorechip->input, EV_KEY, KEY_VOLUMEUP);
+	input_set_capability(moorechip->input, EV_KEY, KEY_VOLUMEDOWN);
+	input_set_capability(moorechip->input, EV_KEY, KEY_SYSRQ);
+	input_set_capability(moorechip->input, EV_KEY, KEY_POWER);
+
 	if (moorechip->trigger_mode & MOORECHIP_TRIGGER_MODE_ANALOG) {
 		input_set_abs_params(moorechip->input, ABS_Z,
 				     0, MOORECHIP_MAX_TRIGGER_MAG, 0, 0);
@@ -1271,6 +1285,20 @@ static const struct {
 	{ "up",     BTN_DPAD_UP },
 	{ "left",   BTN_DPAD_LEFT },
 	{ "right",  BTN_DPAD_RIGHT },
+
+	// Additional mappable options
+	{ "c",               BTN_C },
+	{ "z",               BTN_Z },
+	{ "dnd",             BTN_DND },
+	{ "assist",          KEY_ASSISTANT },
+	{ "app_switch",      KEY_APPSELECT },
+	{ "mode",            BTN_MODE },
+	{ "brightness_down", KEY_BRIGHTNESSDOWN },
+	{ "brightness_up",   KEY_BRIGHTNESSUP },
+	{ "volume_up",       KEY_VOLUMEUP },
+	{ "volume_down",     KEY_VOLUMEDOWN },
+	{ "screenshot",      KEY_SYSRQ },
+	{ "power",           KEY_POWER },
 };
 
 static ssize_t moorechip_set_function(const char *buf, size_t count, u32 *code)
