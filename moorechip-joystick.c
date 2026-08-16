@@ -154,6 +154,7 @@ struct moorechip_driver {
 	int reset_gpio;
 	bool layout_xbox;
 	enum moorechip_trigger_mode trigger_mode;
+	int digital_trigger_threshold;
 	u8 seq;
 	struct moorechip_key_data last_keys;
 	struct moorechip_stick_calib calib_stick_left;
@@ -633,9 +634,9 @@ static int moorechip_joystick_receive_buf(struct serdev_device *serdev,
 			if (!(moorechip->ignore_mask & MOORECHIP_IGNORE_LEFT_TRIGGER)) {
 				if (moorechip->trigger_mode & MOORECHIP_TRIGGER_MODE_DIGITAL) {
 					bool last_active = moorechip_map_trigger_val(&moorechip->calib_trigger_left, last_keys->left_trigger) >
-						MOORECHIP_MAX_TRIGGER_MAG / 2;
+						moorechip->digital_trigger_threshold;
 					bool now_active = moorechip_map_trigger_val(&moorechip->calib_trigger_left, key_data->left_trigger) >
-						MOORECHIP_MAX_TRIGGER_MAG / 2;
+						moorechip->digital_trigger_threshold;
 					if (last_active != now_active)
 						input_report_key(moorechip->input, BTN_TL2, now_active);
 				}
@@ -649,9 +650,9 @@ static int moorechip_joystick_receive_buf(struct serdev_device *serdev,
 			if (!(moorechip->ignore_mask & MOORECHIP_IGNORE_RIGHT_TRIGGER)) {
 				if (moorechip->trigger_mode & MOORECHIP_TRIGGER_MODE_DIGITAL) {
 					bool last_active = moorechip_map_trigger_val(&moorechip->calib_trigger_right, last_keys->right_trigger) >
-						MOORECHIP_MAX_TRIGGER_MAG / 2;
+						moorechip->digital_trigger_threshold;
 					bool now_active = moorechip_map_trigger_val(&moorechip->calib_trigger_right, key_data->right_trigger) >
-						MOORECHIP_MAX_TRIGGER_MAG / 2;
+						moorechip->digital_trigger_threshold;
 					if (last_active != now_active)
 						input_report_key(moorechip->input, BTN_TR2, now_active);
 				}
@@ -1295,6 +1296,29 @@ static ssize_t get_triggers(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR(triggers, 0644, get_triggers, set_triggers);
 
+static ssize_t set_digital_trigger_threshold(struct device *dev, struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct moorechip_driver *moorechip = dev_get_drvdata(dev);
+	int threshold;
+
+	if (kstrtoint(buf, 10, &threshold) || threshold < 0 || threshold > MOORECHIP_MAX_TRIGGER_MAG)
+		return -EINVAL;
+
+	moorechip->digital_trigger_threshold = threshold;
+
+	return count;
+}
+
+static ssize_t get_digital_trigger_threshold(struct device *dev, struct device_attribute *attr,
+				     char *buf)
+{
+	struct moorechip_driver *moorechip = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%d\n", moorechip->digital_trigger_threshold);
+}
+static DEVICE_ATTR(digital_trigger_threshold, 0644, get_digital_trigger_threshold, set_digital_trigger_threshold);
+
 static ssize_t set_ignore_mask(struct device *dev,
 			       struct device_attribute *attr, const char *buf,
 			       size_t count)
@@ -1481,6 +1505,7 @@ static int moorechip_joystick_probe(struct serdev_device *serdev)
 	moorechip->calib_trigger_right.min = 0;
 	moorechip->calib_trigger_right.max = 1900;
 	moorechip->trigger_mode = MOORECHIP_TRIGGER_MODE_BOTH;
+	moorechip->digital_trigger_threshold = MOORECHIP_MAX_TRIGGER_MAG / 2;
 	moorechip->ignore_mask = 0;
 	moorechip->fw = NULL;
 	moorechip->m0_code = KEY_RESERVED;
@@ -1604,6 +1629,7 @@ static int moorechip_joystick_probe(struct serdev_device *serdev)
 	device_create_file(joystick, &dev_attr_raw);
 	device_create_file(joystick, &dev_attr_layout);
 	device_create_file(joystick, &dev_attr_triggers);
+	device_create_file(joystick, &dev_attr_digital_trigger_threshold);
 	device_create_file(joystick, &dev_attr_ignore_mask);
 	device_create_file(joystick, &dev_attr_firmware_version);
 	if (moorechip->m0_key)
