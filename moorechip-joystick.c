@@ -1488,6 +1488,7 @@ static int moorechip_joystick_probe(struct serdev_device *serdev)
 	moorechip->fw_recheck = true;
 	moorechip->seq = 0;
 	memset(&moorechip->last_keys, 0, sizeof(moorechip->last_keys));
+
 	moorechip->calib_stick_left.x.min = -1350;
 	moorechip->calib_stick_left.x.max = 1350;
 	moorechip->calib_stick_left.x.center = 0;
@@ -1504,6 +1505,17 @@ static int moorechip_joystick_probe(struct serdev_device *serdev)
 	moorechip->calib_trigger_left.max = 1900;
 	moorechip->calib_trigger_right.min = 0;
 	moorechip->calib_trigger_right.max = 1900;
+
+	of_property_read_u32(dev->of_node, "moorechip,stick-left-x-min", &moorechip->calib_stick_left.x.min);
+	of_property_read_u32(dev->of_node, "moorechip,stick-left-x-max", &moorechip->calib_stick_left.x.max);
+	of_property_read_u32(dev->of_node, "moorechip,stick-left-y-min", &moorechip->calib_stick_left.y.min);
+	of_property_read_u32(dev->of_node, "moorechip,stick-left-y-max", &moorechip->calib_stick_left.y.max);
+
+	of_property_read_u32(dev->of_node, "moorechip,stick-right-x-min", &moorechip->calib_stick_right.x.min);
+	of_property_read_u32(dev->of_node, "moorechip,stick-right-x-max", &moorechip->calib_stick_right.x.max);
+	of_property_read_u32(dev->of_node, "moorechip,stick-right-y-min", &moorechip->calib_stick_right.y.min);
+	of_property_read_u32(dev->of_node, "moorechip,stick-right-y-max", &moorechip->calib_stick_right.y.max);
+
 	moorechip->trigger_mode = MOORECHIP_TRIGGER_MODE_BOTH;
 	moorechip->digital_trigger_threshold = MOORECHIP_MAX_TRIGGER_MAG / 2;
 	moorechip->ignore_mask = 0;
