@@ -1516,8 +1516,8 @@ static int moorechip_joystick_probe(struct serdev_device *serdev)
 	moorechip->digital_trigger_threshold = MOORECHIP_MAX_TRIGGER_MAG / 2;
 	moorechip->ignore_mask = 0;
 	moorechip->fw = NULL;
-	moorechip->m0_code = KEY_RESERVED;
-	moorechip->m1_code = KEY_RESERVED;
+	moorechip->m0_code = BTN_C;
+	moorechip->m1_code = BTN_Z;
 
 	moorechip->vdd_reg = devm_regulator_get(dev, "vdd");
 	if (IS_ERR(moorechip->vdd_reg)) {
