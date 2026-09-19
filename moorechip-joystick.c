@@ -755,6 +755,7 @@ static int moorechip_joystick_register_input(struct moorechip_driver *moorechip)
 	moorechip->input->id.product = USB_DEVICE_ID_MICROSOFT_XBOX_360_PAD;
 	moorechip->input->id.version = 0x1234;
 	moorechip->input->name = "Xbox Wireless Controller";
+	moorechip->input->uniq = "moorechip";
 	input_set_drvdata(moorechip->input, moorechip);
 
 	input_set_abs_params(moorechip->input, ABS_HAT0X, -1, 1, 0, 0);
