@@ -75,6 +75,26 @@ struct moorechip_parameter {
 	u32 frame_rate;
 } __packed;
 
+/*
+ * MOORECHIP_CMD_SET_PARAMETER selector (byte after cmd). Decoded from stock
+ * librsinput.so (Odin2Portal 1.0.0.338): 1 = input parameters, 2 = fan PWM init,
+ * 3 = fan enable + speed. Both values are big-endian u32.
+ */
+enum moorechip_param_id {
+	MOORECHIP_PARAM_INPUT = 1,
+	MOORECHIP_PARAM_FAN_PWM_INIT = 2,
+	MOORECHIP_PARAM_FAN = 3,
+};
+
+#define MOORECHIP_FAN_SPEED_MAX	50000	/* stock: PWM duty in ns of a 50 us period */
+
+struct moorechip_parameter_u32 {
+	u8 cmd;
+	u8 id;
+	__be32 a;
+	__be32 b;
+} __packed;
+
 struct moorechip_enable {
 	u8 cmd;
 	u8 enable;
@@ -183,6 +203,9 @@ struct moorechip_driver {
 	bool stopping;
 	bool fw_recheck;
 	bool left_stick_axis_swap;
+	bool fan_manual;		/* userspace took over the fan; re-apply on MCU power-on */
+	bool fan_enabled;
+	u32 fan_speed;
 	struct work_struct power_work;
 };
 
@@ -248,7 +271,7 @@ static int moorechip_set_parameter(struct moorechip_driver *moorechip, u32 debou
 {
 	struct moorechip_parameter param = {
 		.cmd = MOORECHIP_CMD_SET_PARAMETER,
-		.data1 = 1, // must be 1, hardcoded in the firmware
+		.data1 = MOORECHIP_PARAM_INPUT,
 		.debounce = __cpu_to_be32(debounce),
 		.frame_rate = __cpu_to_be32(frame_rate)
 	};
@@ -286,6 +309,33 @@ static int moorechip_set_left_stick_axis_swap(struct moorechip_driver *moorechip
 	moorechip->left_stick_axis_swap = enable;
 
 	return moorechip_send_cmd(moorechip, MOORECHIP_TYPE_CMD, &en, sizeof(en));
+}
+
+static int moorechip_set_parameter_u32(struct moorechip_driver *moorechip, u8 id, u32 a, u32 b)
+{
+	struct moorechip_parameter_u32 param = {
+		.cmd = MOORECHIP_CMD_SET_PARAMETER,
+		.id = id,
+		.a = cpu_to_be32(a),
+		.b = cpu_to_be32(b)
+	};
+
+	return moorechip_send_cmd(moorechip, MOORECHIP_TYPE_CMD, &param, sizeof(param));
+}
+
+/* Same two frames stock sends: fun_pwm_init(), then set_fan_enable(en, speed). */
+static int moorechip_apply_fan(struct moorechip_driver *moorechip)
+{
+	int ret;
+
+	ret = moorechip_set_parameter_u32(moorechip, MOORECHIP_PARAM_FAN_PWM_INIT, 0xEF, 0x0B);
+	if (ret)
+		return ret;
+	msleep(10);
+
+	return moorechip_set_parameter_u32(moorechip, MOORECHIP_PARAM_FAN,
+					   moorechip->fan_enabled ? 1 : 0,
+					   moorechip->fan_enabled ? moorechip->fan_speed : 0);
 }
 
 static int moorechip_upgrade_start(struct moorechip_driver *moorechip)
@@ -912,6 +962,9 @@ static int moorechip_joystick_power_on_locked(
 		moorechip_set_left_stick_axis_swap(moorechip, true);
 	}
 
+	if (moorechip->fan_manual)
+		moorechip_apply_fan(moorechip);
+
 	return 0;
 
 err_close:
@@ -1468,6 +1521,85 @@ static ssize_t set_left_stick_axis_swap(struct device *dev, struct device_attrib
 }
 static DEVICE_ATTR(left_stick_axis_swap, 0644, NULL, set_left_stick_axis_swap);
 
+/* MCU is only powered while a panel is on; -EHOSTDOWN means "applied at next power-on". */
+static ssize_t moorechip_fan_store_locked(struct moorechip_driver *moorechip, size_t count)
+{
+	int ret;
+
+	moorechip->fan_manual = true;
+	ret = moorechip_apply_fan(moorechip);
+	if (ret && ret != -EHOSTDOWN)
+		return ret;
+
+	return count;
+}
+
+static ssize_t set_fan_enable(struct device *dev, struct device_attribute *attr,
+			      const char *buf, size_t count)
+{
+	struct moorechip_driver *moorechip = dev_get_drvdata(dev);
+	bool enable;
+	ssize_t ret;
+
+	ret = kstrtobool(buf, &enable);
+	if (ret)
+		return ret;
+
+	mutex_lock(&moorechip->lock);
+	moorechip->fan_enabled = enable;
+	ret = moorechip_fan_store_locked(moorechip, count);
+	mutex_unlock(&moorechip->lock);
+
+	return ret;
+}
+
+static ssize_t get_fan_enable(struct device *dev, struct device_attribute *attr,
+			      char *buf)
+{
+	struct moorechip_driver *moorechip = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%d\n", moorechip->fan_enabled);
+}
+static DEVICE_ATTR(fan_enable, 0644, get_fan_enable, set_fan_enable);
+
+static ssize_t set_fan_speed(struct device *dev, struct device_attribute *attr,
+			     const char *buf, size_t count)
+{
+	struct moorechip_driver *moorechip = dev_get_drvdata(dev);
+	u32 speed;
+	ssize_t ret;
+
+	ret = kstrtou32(buf, 0, &speed);
+	if (ret)
+		return ret;
+	if (speed > MOORECHIP_FAN_SPEED_MAX)
+		return -EINVAL;
+
+	mutex_lock(&moorechip->lock);
+	moorechip->fan_speed = speed;
+	moorechip->fan_enabled = speed > 0;
+	ret = moorechip_fan_store_locked(moorechip, count);
+	mutex_unlock(&moorechip->lock);
+
+	return ret;
+}
+
+static ssize_t get_fan_speed(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	struct moorechip_driver *moorechip = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%u\n", moorechip->fan_speed);
+}
+static DEVICE_ATTR(fan_speed, 0644, get_fan_speed, set_fan_speed);
+
+static ssize_t get_fan_speed_max(struct device *dev, struct device_attribute *attr,
+				 char *buf)
+{
+	return sysfs_emit(buf, "%u\n", MOORECHIP_FAN_SPEED_MAX);
+}
+static DEVICE_ATTR(fan_speed_max, 0444, get_fan_speed_max, NULL);
+
 static int moorechip_joystick_probe(struct serdev_device *serdev)
 {
 	struct moorechip_driver *moorechip;
@@ -1646,6 +1778,9 @@ static int moorechip_joystick_probe(struct serdev_device *serdev)
 	if (moorechip->m1_key)
 		device_create_file(joystick, &dev_attr_m1_function);
 	device_create_file(joystick, &dev_attr_left_stick_axis_swap);
+	device_create_file(joystick, &dev_attr_fan_enable);
+	device_create_file(joystick, &dev_attr_fan_speed);
+	device_create_file(joystick, &dev_attr_fan_speed_max);
 
 	ret = moorechip_register_panel_notifier(moorechip);
 	if (ret)
