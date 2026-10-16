@@ -781,7 +781,7 @@ static int moorechip_joystick_register_input(struct moorechip_driver *moorechip)
 	input_set_capability(moorechip->input, EV_KEY, BTN_MODE);
 	input_set_capability(moorechip->input, EV_KEY, KEY_ASSISTANT);
 	input_set_capability(moorechip->input, EV_KEY, KEY_APPSELECT);
-	input_set_capability(moorechip->input, EV_KEY, BTN_DND);
+	input_set_capability(moorechip->input, EV_KEY, KEY_DO_NOT_DISTURB);
 	input_set_capability(moorechip->input, EV_KEY, KEY_BRIGHTNESSDOWN);
 	input_set_capability(moorechip->input, EV_KEY, KEY_BRIGHTNESSUP);
 	input_set_capability(moorechip->input, EV_KEY, KEY_VOLUMEDOWN);
@@ -1378,7 +1378,7 @@ static const struct {
 	{ "mode",            BTN_MODE },
 	{ "assist",          KEY_ASSISTANT },
 	{ "app_switch",      KEY_APPSELECT },
-	{ "dnd",             BTN_DND },
+	{ "dnd",             KEY_DO_NOT_DISTURB },
 	{ "brightness_down", KEY_BRIGHTNESSDOWN },
 	{ "brightness_up",   KEY_BRIGHTNESSUP },
 	{ "volume_down",     KEY_VOLUMEDOWN },
